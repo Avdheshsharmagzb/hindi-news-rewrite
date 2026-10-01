@@ -48,6 +48,12 @@ SOURCES = [
      "url": _gn("मुजफ्फरनगर समाचार"), "gn": True},
     {"category": "लखनऊ प्रशासनिक तबादले", "source": "Google News", "lang": "hi", "cap": 10,
      "url": _gn("लखनऊ सरकार प्रशासनिक तबादला विभाग"), "gn": True},
+    {"category": "सिनेमा जगत", "source": "Times of India", "lang": "en", "cap": 8,
+     "url": "https://timesofindia.indiatimes.com/rssfeeds/1081479906.cms", "gn": False},
+    {"category": "सिनेमा जगत", "source": "Google News", "lang": "hi", "cap": 10,
+     "url": _gn("बॉलीवुड हिंदी सिनेमा फिल्म समाचार"), "gn": True},
+    {"category": "टीवी जगत", "source": "Google News", "lang": "hi", "cap": 10,
+     "url": _gn("टीवी सीरियल टेलीविजन मनोरंजन समाचार"), "gn": True},
 ]
 
 
