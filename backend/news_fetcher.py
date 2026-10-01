@@ -62,6 +62,12 @@ SOURCES = [
      "url": "https://www.thehindu.com/sport/feeder/default.rss", "gn": False},
     {"category": "खेल (अन्य)", "source": "Google News", "lang": "hi", "cap": 10,
      "url": _gn("हॉकी फुटबॉल कबड्डी बैडमिंटन ओलंपिक भारत खेल समाचार"), "gn": True},
+    {"category": "धर्म व आध्यात्म", "source": "Times of India", "lang": "en", "cap": 6, "max_age_hours": 72,
+     "url": "https://timesofindia.indiatimes.com/rssfeeds/65857041.cms", "gn": False},
+    {"category": "धर्म व आध्यात्म", "source": "Google News", "lang": "hi", "cap": 10, "max_age_hours": 72,
+     "url": _gn("भगवान देवी देवता पौराणिक प्रेरक कथा प्रसंग"), "gn": True},
+    {"category": "धर्म व आध्यात्म", "source": "Google News", "lang": "hi", "cap": 8, "max_age_hours": 72,
+     "url": _gn("रामायण महाभारत व्रत त्योहार पूजा कथा महत्व"), "gn": True},
 ]
 
 
@@ -128,11 +134,12 @@ async def collect_candidates():
     for src, content in fetched:
         if not content:
             continue
+        max_age = src.get("max_age_hours", MAX_AGE_HOURS)
         parsed = feedparser.parse(content)
         rows = []
         for e in parsed.entries:
             dt = _entry_dt(e)
-            if dt is None or (now - dt) > timedelta(hours=MAX_AGE_HOURS):
+            if dt is None or (now - dt) > timedelta(hours=max_age):
                 continue
             link = (e.get("link") or "").strip()
             if not link or link in seen_links:
