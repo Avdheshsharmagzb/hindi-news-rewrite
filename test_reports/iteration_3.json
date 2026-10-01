@@ -1,0 +1,40 @@
+{
+  "summary": "Tested the new image-generation + publisher-brand feature end-to-end (backend + frontend). Backend: added /app/backend/tests/test_image_feature.py (10 tests) covering publisher_brand='गाजियाबाद टाइम्स' on rewritten/published items, image_url/image_status fields present, source field still kept in DB/API, media serving (200 image/jpeg), path-traversal rejection (400/404), POST /api/news/{id}/generate-image returning 400 on Pending_Review items and 404 on unknown ids, and ONE real Nano Banana generation on a rewritten item without image (image_status→generated, /api/media/*.jpg served 200). Full regression: 26/26 pytest tests pass. Frontend: dashboard loads, Rewritten_Pending_Publish cards hide the real source and show BRAND with shield icon (5 brand occurrences, 0 on Pending_Review tab), cards with image_url render news-image-{id} (naturalWidth=1365 confirmed), cards without image render generate-image-btn-{id} ('फोटो जेनरेट करें'), Pending_Review cards still display स्रोत: label (108 occurrences). Comparison modal opens, displays comparison-image with visible 'गाजियाबाद टाइम्स' watermark + BRAND byline, publish button present. Only 1 real image generation triggered (cost control honored).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Header title 'संपादकीय न्यूज़रूम'", "issues": ["Display font appears to not render all Devanagari matras cleanly (looks slightly garbled in header). The body font-hindi class renders perfectly; issue is isolated to the font-display class used on the top header title."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_image_feature.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_fetch_and_cron.py",
+    "/app/test_reports/pytest/image_feature_results.xml",
+    "/app/test_reports/pytest/all_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Consider switching the display-font used by the main header 'संपादकीय न्यूज़रूम' to a Devanagari-aware display font (e.g. Noto Serif Devanagari / Rozha One) — the current font causes matras to render imperfectly in that header only.",
+    "(Optional, minor) Seed data for SEED_REWRITTEN/SEED_PUBLISHED sets image_status default='none'. Policy for freshly rewritten items without a source photo sets 'awaiting_approval'. Not a bug (seed is pre-feature) but for consistency the startup seed could set image_status='awaiting_approval' on those seeded rewritten/published items."
+  ],
+  "critical_code_review_comments": [
+    "image_service._api_key() correctly re-reads EMERGENT_LLM_KEY at call time — the earlier import-time-None bug is fixed.",
+    "GET /api/media/{name} path traversal filter checks for '/', '\\\\', '..' before touching the filesystem — safe; verified with ..%2f.., ..%2Fetc%2Fpasswd, foo%2Fbar.jpg all returning 400/404.",
+    "Rewrite endpoint auto-generates image when image_source_url is present and sets image_status='awaiting_approval' otherwise — correctly matches the stated policy.",
+    "Frontend MEDIA(it.image_url) prefixes REACT_APP_BACKEND_URL so images load via the public ingress; no hardcoded localhost — good.",
+    "Original 'source' field remains in the DB and is returned by GET /api/news (confirmed in test) but NewsDashboard.jsx hides it for non-Pending_Review cards via `it.status === 'Pending_Review' ? source : BRAND` — spec met.",
+    "Minor: generate-image-btn is defined once in the card and once inside ComparisonModal with the same data-testid. React duplicate testids are tolerated but could cause strict mode warnings; consider suffixing e.g. '-modal'."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_image_feature.py"
+  ],
+  "success_rate": {"backend": "100% (26/26)", "frontend": "100%"},
+  "test_credentials": "N/A (no auth). WEBHOOK_CRON_SECRET from backend/.env used in cron tests.",
+  "seed_data_creation": "No new seed. Reused existing rewritten/published items. Triggered exactly ONE real Nano Banana image generation on an existing no-image rewritten item (cost control honored).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Image feature is fully covered by /app/backend/tests/test_image_feature.py. If re-running, note test_generate_image_on_rewritten_item_once will consume one Nano Banana call per no-image rewritten item in the DB (it picks the first one found and will no-op/skip if all rewritten items already have images). test_fetch_and_cron.py requires REACT_APP_BACKEND_URL env var exported before pytest (no default).",
+  "rca of the issue": "No issues found. The previously reported load_dotenv/EMERGENT_LLM_KEY-at-import bug is confirmed fixed (image_service._api_key() reads env at call time)."
+}

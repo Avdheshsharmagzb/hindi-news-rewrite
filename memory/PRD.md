@@ -32,6 +32,13 @@ Add an 'Approve for Rewrite' action button on 'Pending_Review' news items in the
 - Frontend: Fetch button + dynamic region/category filter dropdown.
 - Verified: 16/16 backend tests + frontend 100% (iteration_2.json).
 
+## Implemented (2026-10) — Source Removal, "गाजियाबाद टाइम्स" Branding & AI Watermarked Images
+- After 'Approve for Rewrite': original source fully hidden on all rewritten/published cards + comparison modal; publisher shown as "गाजियाबाद टाइम्स" (brand byline with shield). Original `source` retained in DB only.
+- AI image via Gemini Nano Banana (`gemini-3.1-flash-image-preview`, Emergent key). Policy: if fetched news had a source photo (`image_source_url` extracted from RSS media/enclosure) → auto re-generate (AI-transformed, copyright-safe) at rewrite time; if no photo → admin clicks 'फोटो जेनरेट करें' to allow.
+- Watermark: centered light diagonal + bottom-right box "गाजियाबाद टाइम्स" burned via Pillow+raqm (Noto Serif Devanagari, persisted in backend/assets). Images saved to backend/generated_media, served via `GET /api/media/{name}` (path-traversal guarded).
+- Endpoints: `POST /api/news/{id}/generate-image`. NewsItem: image_source_url, image_url, image_status, publisher_brand.
+- Verified: 26/26 backend tests + frontend 100% (iteration_3.json).
+
 ## Backlog / Remaining
 - P1: Auth (JWT or Emergent Google) for admin dashboard.
 - P2: Edit original before rewrite; re-trigger rewrite; archive published; diff highlighting.

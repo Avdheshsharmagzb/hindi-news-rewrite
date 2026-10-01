@@ -206,7 +206,7 @@ export default function NewsDashboard() {
               <Newspaper className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-display leading-none tracking-wide">
+              <h1 className="text-2xl md:text-3xl font-hindi font-bold leading-tight tracking-wide">
                 संपादकीय न्यूज़रूम
               </h1>
               <p className="text-xs font-mono uppercase tracking-[0.25em] text-muted-foreground mt-1">
@@ -474,7 +474,7 @@ function ComparisonModal({ item, onClose, onPublish, onGenerateImage, generating
                 variant="secondary"
                 onClick={() => onGenerateImage(item.id)}
                 disabled={generatingId === item.id}
-                data-testid={NEWS.imageGenBtn(item.id)}
+                data-testid={`generate-image-btn-${item.id}-modal`}
                 className="gap-2 mb-3"
               >
                 {generatingId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
