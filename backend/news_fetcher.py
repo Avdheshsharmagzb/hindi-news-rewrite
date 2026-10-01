@@ -74,6 +74,18 @@ SOURCES = [
      "url": _gn("भारतीय वैज्ञानिक समाज सुधारक स्वतंत्रता सेनानी जीवनी"), "gn": True},
     {"category": "महापुरुष व विभूतियाँ", "source": "Google News", "lang": "hi", "cap": 6, "max_age_hours": 72,
      "url": _gn("भारत रत्न विभूति जयंती पुण्यतिथि प्रेरक कहानी"), "gn": True},
+    {"category": "अर्थव्यवस्था व व्यापार", "source": "The Hindu", "lang": "en", "cap": 6,
+     "url": "https://www.thehindu.com/business/feeder/default.rss", "gn": False},
+    {"category": "अर्थव्यवस्था व व्यापार", "source": "Google News", "lang": "hi", "cap": 10,
+     "url": _gn("भारतीय अर्थव्यवस्था जीडीपी व्यापार समाचार"), "gn": True},
+    {"category": "शेयर बाज़ार व कमोडिटी", "source": "The Hindu", "lang": "en", "cap": 6,
+     "url": "https://www.thehindu.com/business/markets/feeder/default.rss", "gn": False},
+    {"category": "शेयर बाज़ार व कमोडिटी", "source": "Google News", "lang": "hi", "cap": 10,
+     "url": _gn("शेयर बाजार सेंसेक्स निफ्टी समाचार"), "gn": True},
+    {"category": "शेयर बाज़ार व कमोडिटी", "source": "Google News", "lang": "hi", "cap": 8,
+     "url": _gn("कमोडिटी सोना चांदी कच्चा तेल भाव"), "gn": True},
+    {"category": "आविष्कार व नवाचार", "source": "Google News", "lang": "hi", "cap": 8,
+     "url": _gn("भारत नया आविष्कार तकनीक नवाचार अनुसंधान समाचार"), "gn": True},
 ]
 
 
