@@ -68,6 +68,12 @@ SOURCES = [
      "url": _gn("भगवान देवी देवता पौराणिक प्रेरक कथा प्रसंग"), "gn": True},
     {"category": "धर्म व आध्यात्म", "source": "Google News", "lang": "hi", "cap": 8, "max_age_hours": 72,
      "url": _gn("रामायण महाभारत व्रत त्योहार पूजा कथा महत्व"), "gn": True},
+    {"category": "महापुरुष व विभूतियाँ", "source": "Google News", "lang": "hi", "cap": 8, "max_age_hours": 72,
+     "url": _gn("भारतीय महापुरुष जीवनी प्रेरक प्रसंग योगदान"), "gn": True},
+    {"category": "महापुरुष व विभूतियाँ", "source": "Google News", "lang": "hi", "cap": 6, "max_age_hours": 72,
+     "url": _gn("भारतीय वैज्ञानिक समाज सुधारक स्वतंत्रता सेनानी जीवनी"), "gn": True},
+    {"category": "महापुरुष व विभूतियाँ", "source": "Google News", "lang": "hi", "cap": 6, "max_age_hours": 72,
+     "url": _gn("भारत रत्न विभूति जयंती पुण्यतिथि प्रेरक कहानी"), "gn": True},
 ]
 
 
