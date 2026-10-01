@@ -2,6 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import NewsDashboard from "@/components/NewsDashboard";
+import PublicNews from "@/components/PublicNews";
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<NewsDashboard />} />
+          <Route path="/news" element={<PublicNews />} />
         </Routes>
       </BrowserRouter>
     </div>

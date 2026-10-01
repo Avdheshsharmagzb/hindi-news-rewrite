@@ -5,12 +5,14 @@ import { toast } from "sonner";
 import {
   Newspaper, Sparkles, Loader2, Sun, Moon, Plus, Send, Trash2,
   GitCompareArrows, ShieldCheck, Search, FileText, Clock, DownloadCloud, ImagePlus,
+  Settings, RefreshCw, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -62,6 +64,23 @@ export default function NewsDashboard() {
   const [fetching, setFetching] = useState(false);
   const [region, setRegion] = useState("All");
   const [genImageId, setGenImageId] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [wm, setWm] = useState({ watermark_position: "center", watermark_opacity: 30 });
+
+  useEffect(() => {
+    axios.get(`${API}/settings`).then((r) => setWm(r.data)).catch(() => {});
+  }, []);
+
+  const saveSettings = async (next) => {
+    try {
+      const { data } = await axios.put(`${API}/settings`, next);
+      setWm(data);
+      toast.success("वाटरमार्क सेटिंग सहेजी गई");
+      setSettingsOpen(false);
+    } catch (e) {
+      toast.error("सेटिंग सहेजने में विफल");
+    }
+  };
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -214,15 +233,35 @@ export default function NewsDashboard() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setDark((d) => !d)}
-            data-testid={NEWS.themeToggleBtn}
-            className="rounded-full"
-          >
-            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="gap-2 rounded-full hidden sm:flex"
+              onClick={() => window.open("/news", "_blank")}
+              data-testid="public-page-link"
+            >
+              <ExternalLink className="h-4 w-4" /> सार्वजनिक पेज
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              data-testid="settings-btn"
+              className="rounded-full"
+              title="वाटरमार्क सेटिंग"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setDark((d) => !d)}
+              data-testid={NEWS.themeToggleBtn}
+              className="rounded-full"
+            >
+              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+          </div>
         </header>
 
         <div className="max-w-7xl mx-auto px-6 pb-7 grid grid-cols-2 md:grid-cols-4 gap-3 relative">
@@ -379,11 +418,10 @@ export default function NewsDashboard() {
                         <Button size="sm" variant="outline" onClick={() => setCompareItem(it)} data-testid={NEWS.compareBtn(it.id)} className="gap-2">
                           <GitCompareArrows className="h-4 w-4" /> तुलना देखें
                         </Button>
-                        {!it.image_url && (
-                          <Button size="sm" variant="secondary" onClick={() => handleGenerateImage(it.id)} disabled={genImageId === it.id} data-testid={NEWS.imageGenBtn(it.id)} className="gap-2">
-                            {genImageId === it.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />} फोटो जेनरेट करें
-                          </Button>
-                        )}
+                        <Button size="sm" variant="secondary" onClick={() => handleGenerateImage(it.id)} disabled={genImageId === it.id} data-testid={NEWS.imageGenBtn(it.id)} className="gap-2">
+                          {genImageId === it.id ? <Loader2 className="h-4 w-4 animate-spin" /> : it.image_url ? <RefreshCw className="h-4 w-4" /> : <ImagePlus className="h-4 w-4" />}
+                          {it.image_url ? "फोटो पुनः बनाएँ" : "फोटो जेनरेट करें"}
+                        </Button>
                         <Button size="sm" onClick={() => handlePublish(it.id)} data-testid={NEWS.publishBtn(it.id)} className="gap-2">
                           <Send className="h-4 w-4" /> प्रकाशित करें
                         </Button>
@@ -394,11 +432,10 @@ export default function NewsDashboard() {
                         <Button size="sm" variant="outline" onClick={() => setCompareItem(it)} data-testid={NEWS.compareBtn(it.id)} className="gap-2">
                           <GitCompareArrows className="h-4 w-4" /> लेख देखें
                         </Button>
-                        {!it.image_url && (
-                          <Button size="sm" variant="secondary" onClick={() => handleGenerateImage(it.id)} disabled={genImageId === it.id} data-testid={NEWS.imageGenBtn(it.id)} className="gap-2">
-                            {genImageId === it.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />} फोटो जेनरेट करें
-                          </Button>
-                        )}
+                        <Button size="sm" variant="secondary" onClick={() => handleGenerateImage(it.id)} disabled={genImageId === it.id} data-testid={NEWS.imageGenBtn(it.id)} className="gap-2">
+                          {genImageId === it.id ? <Loader2 className="h-4 w-4 animate-spin" /> : it.image_url ? <RefreshCw className="h-4 w-4" /> : <ImagePlus className="h-4 w-4" />}
+                          {it.image_url ? "फोटो पुनः बनाएँ" : "फोटो जेनरेट करें"}
+                        </Button>
                       </>
                     )}
                   </div>
@@ -417,7 +454,67 @@ export default function NewsDashboard() {
         generatingId={genImageId}
       />
       <AddNewsModal open={addOpen} onClose={() => setAddOpen(false)} onCreated={loadAll} />
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} wm={wm} onSave={saveSettings} />
     </div>
+  );
+}
+
+function SettingsDialog({ open, onClose, wm, onSave }) {
+  const [pos, setPos] = useState(wm.watermark_position);
+  const [op, setOp] = useState(wm.watermark_opacity);
+
+  useEffect(() => {
+    setPos(wm.watermark_position);
+    setOp(wm.watermark_opacity);
+  }, [wm, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md" data-testid="settings-dialog">
+        <DialogHeader>
+          <DialogTitle className="font-hindi text-xl flex items-center gap-2">
+            <Settings className="h-5 w-5 text-primary" /> वाटरमार्क सेटिंग
+          </DialogTitle>
+          <DialogDescription>
+            "गाजियाबाद टाइम्स" वाटरमार्क की स्थिति और पारदर्शिता चुनें। नई/पुनः बनाई गई फोटो पर लागू होगी।
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-5 mt-2">
+          <div className="space-y-1.5">
+            <Label>स्थिति</Label>
+            <Select value={pos} onValueChange={setPos}>
+              <SelectTrigger data-testid="wm-position-select"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="center">बीच में (हल्का, तिरछा)</SelectItem>
+                <SelectItem value="bottom-right">नीचे-दाएँ कोने</SelectItem>
+                <SelectItem value="bottom-left">नीचे-बाएँ कोने</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>पारदर्शिता (opacity): {op}%</Label>
+            <Slider
+              min={5}
+              max={100}
+              step={5}
+              value={[op]}
+              onValueChange={(v) => setOp(v[0])}
+              data-testid="wm-opacity-slider"
+            />
+          </div>
+        </div>
+        <DialogFooter className="mt-4">
+          <Button variant="outline" onClick={onClose}>रद्द करें</Button>
+          <Button
+            onClick={() => onSave({ watermark_position: pos, watermark_opacity: op })}
+            data-testid="wm-save-btn"
+            className="gap-2"
+          >
+            सहेजें
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -465,8 +562,21 @@ function ComparisonModal({ item, onClose, onPublish, onGenerateImage, generating
             </div>
 
             {item.image_url ? (
-              <div className="mb-3 rounded-lg overflow-hidden border border-primary/30">
-                <img src={MEDIA(item.image_url)} alt={BRAND} data-testid="comparison-image" className="w-full h-56 object-cover" />
+              <div className="mb-3 space-y-2">
+                <div className="rounded-lg overflow-hidden border border-primary/30">
+                  <img src={MEDIA(item.image_url)} alt={BRAND} data-testid="comparison-image" className="w-full h-56 object-cover" />
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onGenerateImage(item.id)}
+                  disabled={generatingId === item.id}
+                  data-testid={`regenerate-image-btn-${item.id}`}
+                  className="gap-2 w-full"
+                >
+                  {generatingId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  फोटो पुनः बनाएँ
+                </Button>
               </div>
             ) : (
               <Button

@@ -77,37 +77,41 @@ async def _download(url):
         return r.content
 
 
-def _add_watermark(img_bytes):
+def _add_watermark(img_bytes, position="center", opacity=30):
     base = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
     W, H = base.size
     overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    opacity = max(5, min(100, int(opacity)))
+    alpha = int(opacity / 100 * 255)
 
-    # Centered, light, diagonal brand watermark
-    font_size = max(30, W // 11)
-    font = ImageFont.truetype(str(FONT_PATH), font_size, layout_engine=ImageFont.Layout.RAQM)
-    tmp = ImageDraw.Draw(overlay)
-    bbox = tmp.textbbox((0, 0), BRAND, font=font)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    pad = font_size // 2
-    txt_img = Image.new("RGBA", (tw + pad * 2, th + pad * 2), (0, 0, 0, 0))
-    td = ImageDraw.Draw(txt_img)
-    # soft shadow + light white fill for a subtle, professional look
-    td.text((pad + 2, pad + 2), BRAND, font=font, fill=(0, 0, 0, 45))
-    td.text((pad, pad), BRAND, font=font, fill=(255, 255, 255, 70))
-    txt_img = txt_img.rotate(28, expand=1)
-    overlay.alpha_composite(txt_img, ((W - txt_img.width) // 2, (H - txt_img.height) // 2))
-
-    # Small solid corner brand (bottom-right) for clear ownership
-    small = ImageFont.truetype(str(FONT_PATH), max(18, W // 32), layout_engine=ImageFont.Layout.RAQM)
-    cd = ImageDraw.Draw(overlay)
-    cbbox = cd.textbbox((0, 0), BRAND, font=small)
-    cw, ch = cbbox[2] - cbbox[0], cbbox[3] - cbbox[1]
-    margin = max(12, W // 60)
-    cd.rectangle(
-        [W - cw - margin * 2 - margin, H - ch - margin * 2 - margin, W - margin, H - margin],
-        fill=(0, 0, 0, 90),
-    )
-    cd.text((W - cw - margin * 2, H - ch - margin * 2 - margin // 2), BRAND, font=small, fill=(255, 255, 255, 230))
+    if position == "center":
+        font_size = max(30, W // 11)
+        font = ImageFont.truetype(str(FONT_PATH), font_size, layout_engine=ImageFont.Layout.RAQM)
+        tmp = ImageDraw.Draw(overlay)
+        bbox = tmp.textbbox((0, 0), BRAND, font=font)
+        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        pad = font_size // 2
+        txt_img = Image.new("RGBA", (tw + pad * 2, th + pad * 2), (0, 0, 0, 0))
+        td = ImageDraw.Draw(txt_img)
+        td.text((pad + 2, pad + 2), BRAND, font=font, fill=(0, 0, 0, max(20, alpha // 2)))
+        td.text((pad, pad), BRAND, font=font, fill=(255, 255, 255, alpha))
+        txt_img = txt_img.rotate(28, expand=1)
+        overlay.alpha_composite(txt_img, ((W - txt_img.width) // 2, (H - txt_img.height) // 2))
+    else:
+        font_size = max(20, W // 24)
+        font = ImageFont.truetype(str(FONT_PATH), font_size, layout_engine=ImageFont.Layout.RAQM)
+        cd = ImageDraw.Draw(overlay)
+        cbbox = cd.textbbox((0, 0), BRAND, font=font)
+        cw, ch = cbbox[2] - cbbox[0], cbbox[3] - cbbox[1]
+        margin = max(14, W // 55)
+        if position == "bottom-left":
+            x0 = margin
+        else:  # bottom-right (default corner)
+            x0 = W - cw - margin * 3
+        y0 = H - ch - margin * 3
+        cd.rectangle([x0 - margin, y0 - margin, x0 + cw + margin, y0 + ch + margin + ch // 3],
+                     fill=(0, 0, 0, min(140, alpha + 40)))
+        cd.text((x0, y0), BRAND, font=font, fill=(255, 255, 255, min(255, alpha + 120)))
 
     out = Image.alpha_composite(base, overlay).convert("RGB")
     buf = io.BytesIO()
@@ -115,7 +119,7 @@ def _add_watermark(img_bytes):
     return buf.getvalue()
 
 
-async def create_watermarked_image(headline, category, original_image_url=None):
+async def create_watermarked_image(headline, category, original_image_url=None, position="center", opacity=30):
     """Returns the API path (e.g. /api/media/xxxx.jpg) of the watermarked image."""
     raw = None
     if original_image_url:
@@ -127,7 +131,7 @@ async def create_watermarked_image(headline, category, original_image_url=None):
     if raw is None:
         raw = await _nano_banana(_headline_prompt(headline, category))
 
-    watermarked = _add_watermark(raw)
+    watermarked = _add_watermark(raw, position=position, opacity=opacity)
     name = f"{uuid.uuid4().hex}.jpg"
     (MEDIA_DIR / name).write_bytes(watermarked)
     return f"/api/media/{name}"

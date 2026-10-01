@@ -78,6 +78,18 @@ class NewsCreate(BaseModel):
     source_language: str = "en"
 
 
+class SettingsUpdate(BaseModel):
+    watermark_position: str = "center"
+    watermark_opacity: int = 30
+
+
+async def get_watermark_settings():
+    doc = await db.settings.find_one({"key": "watermark"}, {"_id": 0})
+    if not doc:
+        return "center", 30
+    return doc.get("position", "center"), int(doc.get("opacity", 30))
+
+
 # ---------------- AI Rewrite ----------------
 REWRITE_SYSTEM_PROMPT = (
     "आप एक वरिष्ठ हिंदी समाचार संपादक हैं जो भारत के अग्रणी समाचार संस्थान के लिए कार्य करते हैं। "
@@ -193,8 +205,10 @@ async def rewrite_news(item_id: str):
     # with watermark. If no source photo, wait for admin approval to generate one.
     if doc.get("image_source_url"):
         try:
+            wm_pos, wm_op = await get_watermark_settings()
             update["image_url"] = await create_watermarked_image(
-                result["headline"], doc.get("category", ""), doc["image_source_url"]
+                result["headline"], doc.get("category", ""), doc["image_source_url"],
+                position=wm_pos, opacity=wm_op,
             )
             update["image_status"] = "generated"
         except Exception:
@@ -218,8 +232,10 @@ async def generate_image_for_news(item_id: str):
 
     headline = doc.get("rewritten_headline") or doc.get("headline")
     try:
+        wm_pos, wm_op = await get_watermark_settings()
         image_url = await create_watermarked_image(
-            headline, doc.get("category", ""), doc.get("image_source_url") or None
+            headline, doc.get("category", ""), doc.get("image_source_url") or None,
+            position=wm_pos, opacity=wm_op,
         )
     except Exception as e:
         logger.exception("Image generation failed")
@@ -261,6 +277,46 @@ async def get_media(name: str):
     if not path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(str(path), media_type="image/jpeg")
+
+
+@api_router.get("/settings")
+async def read_settings():
+    pos, op = await get_watermark_settings()
+    return {"watermark_position": pos, "watermark_opacity": op}
+
+
+@api_router.put("/settings")
+async def update_settings(payload: SettingsUpdate):
+    pos = payload.watermark_position
+    if pos not in ("center", "bottom-right", "bottom-left"):
+        raise HTTPException(status_code=400, detail="Invalid watermark position")
+    op = max(5, min(100, int(payload.watermark_opacity)))
+    await db.settings.update_one(
+        {"key": "watermark"},
+        {"$set": {"key": "watermark", "position": pos, "opacity": op}},
+        upsert=True,
+    )
+    return {"watermark_position": pos, "watermark_opacity": op}
+
+
+@api_router.get("/public/news")
+async def public_news(category: Optional[str] = None):
+    query = {"status": STATUS_PUBLISHED}
+    if category and category != "All":
+        query["category"] = category
+    docs = await db.news.find(query, {"_id": 0}).sort("updated_at", -1).to_list(500)
+    out = []
+    for d in docs:
+        out.append({
+            "id": d["id"],
+            "category": d.get("category", ""),
+            "headline": d.get("rewritten_headline") or d.get("headline"),
+            "content": d.get("rewritten_content") or d.get("content"),
+            "image_url": d.get("image_url", ""),
+            "publisher_brand": d.get("publisher_brand", "गाजियाबाद टाइम्स"),
+            "published_at": d.get("updated_at"),
+        })
+    return out
 
 
 async def fetch_and_store():
