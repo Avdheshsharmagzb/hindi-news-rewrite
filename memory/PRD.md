@@ -24,6 +24,14 @@ Add an 'Approve for Rewrite' action button on 'Pending_Review' news items in the
 - No auth (per user choice).
 - Verified: backend 100% + frontend 100% (test_reports/iteration_1.json).
 
+## Implemented (2026-10) — Automatic News Fetching
+- Sources: Times of India + The Hindu RSS (राष्ट्रीय), Google News Hindi RSS for localities (दिल्ली, गाज़ियाबाद, नोएडा, ग्रेटर नोएडा, हापुड़, मेरठ, मुज़फ़्फ़रनगर, लखनऊ प्रशासनिक तबादले) — all free, no API key.
+- `news_fetcher.py`: async fetch via httpx + feedparser, only items ≤4h old, per-category caps, newest-first.
+- Dedup by link/URL + normalized title (same news never stored twice). New items land in Pending_Review with locality `category` + `source_url`.
+- Manual `POST /api/news/fetch` ('न्यूज़ फेच करें' button) + hourly cron `POST /api/cron/fetch-news` (Bearer `WEBHOOK_CRON_SECRET`, background task). `.emergent/crons.yml` runs `0 * * * *`.
+- Frontend: Fetch button + dynamic region/category filter dropdown.
+- Verified: 16/16 backend tests + frontend 100% (iteration_2.json).
+
 ## Backlog / Remaining
 - P1: Auth (JWT or Emergent Google) for admin dashboard.
 - P2: Edit original before rewrite; re-trigger rewrite; archive published; diff highlighting.

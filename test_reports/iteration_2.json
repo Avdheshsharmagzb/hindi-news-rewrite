@@ -1,0 +1,32 @@
+{
+  "summary": "Validated the newly added auto news-fetch feature end-to-end. Backend: added /app/backend/tests/test_fetch_and_cron.py (6 new tests) covering POST /api/news/fetch shape, URL/title dedup on immediate re-fetch (fetched=0), locality-category + source_url presence on Pending_Review items, and cron auth matrix (401 no header / 401 wrong Bearer / 200 correct Bearer). All 16 backend tests pass (regression + new) in ~12s. Frontend: dashboard loads, 'न्यूज़ फेच करें' (fetch-news-btn) triggers fetch and list refreshes to 46 Pending_Review cards, region-filter dropdown lists 13 categories including राष्ट्रीय, दिल्ली, गाज़ियाबाद, नोएडा, ग्रेटर नोएडा, हापुड़, मेरठ plus legacy National/Politics/Business/Technology/Sports, Pending_Review cards expose 'Approve for Rewrite' buttons (verified 46 instances) and the existing rewrite/compare/publish flow was already verified in iteration_1.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_fetch_and_cron.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/pytest/fetch_cron_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "news_fetcher.collect_candidates uses a 20s timeout per feed with asyncio.gather — if any feed hangs the whole /api/news/fetch call is bounded by 20s which is fine, but consider setting a stricter per-call total deadline.",
+    "server.fetch_and_store loads full news collection into memory for existing_urls/titles — fine at current scale but will not scale beyond a few 100k docs. Consider using a unique index on source_url with ordered=False insert_many to let Mongo enforce dedup server-side.",
+    "WEBHOOK_CRON_SECRET is read at import time via os.environ.get — if secret is empty, cron endpoint will reject all requests silently returning 401 (good fail-closed), but it would help to log a warning at startup when WEBHOOK_CRON_SECRET is empty.",
+    "Expected locality categories मुज़फ़्फ़रनगर and लखनऊ प्रशासनिक तबादले were absent from the region dropdown on this run — this is expected per the problem statement (feeds may have 0 items <=4h old), not a bug."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_fetch_and_cron.py"
+  ],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "100%"},
+  "test_credentials": "N/A (no auth). Cron secret from backend/.env: WEBHOOK_CRON_SECRET.",
+  "seed_data_creation": "No new seed. Live RSS fetch populated 46 Pending_Review items at test time (राष्ट्रीय, दिल्ली, गाज़ियाबाद, नोएडा, ग्रेटर नोएडा, हापुड़, मेरठ).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New endpoints /api/news/fetch and /api/cron/fetch-news are covered by /app/backend/tests/test_fetch_and_cron.py. The dedup test relies on DB state — if DB is wiped between runs the second call will still return 0 because the first test call populates DB first. Locality categories list in UI is dynamic (built from items.map(category)) so expect it to vary with time of day based on RSS freshness.",
+  "rca of the issue": "No issues found. Feature works end-to-end: fetch populates Pending_Review with locality categories, dedup prevents duplicates (verified fetched=0 on immediate re-fetch), cron is Bearer-token protected via hmac.compare_digest, and the UI integrates correctly with existing rewrite/publish flow."
+}
