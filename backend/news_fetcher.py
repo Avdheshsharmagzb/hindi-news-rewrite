@@ -54,6 +54,14 @@ SOURCES = [
      "url": _gn("बॉलीवुड हिंदी सिनेमा फिल्म समाचार"), "gn": True},
     {"category": "टीवी जगत", "source": "Google News", "lang": "hi", "cap": 10,
      "url": _gn("टीवी सीरियल टेलीविजन मनोरंजन समाचार"), "gn": True},
+    {"category": "खेल (क्रिकेट)", "source": "Times of India", "lang": "en", "cap": 8,
+     "url": "https://timesofindia.indiatimes.com/rssfeeds/4719148.cms", "gn": False},
+    {"category": "खेल (क्रिकेट)", "source": "Google News", "lang": "hi", "cap": 12,
+     "url": _gn("क्रिकेट भारतीय टीम अंतरराष्ट्रीय समाचार"), "gn": True},
+    {"category": "खेल (अन्य)", "source": "The Hindu", "lang": "en", "cap": 6,
+     "url": "https://www.thehindu.com/sport/feeder/default.rss", "gn": False},
+    {"category": "खेल (अन्य)", "source": "Google News", "lang": "hi", "cap": 10,
+     "url": _gn("हॉकी फुटबॉल कबड्डी बैडमिंटन ओलंपिक भारत खेल समाचार"), "gn": True},
 ]
 
 
