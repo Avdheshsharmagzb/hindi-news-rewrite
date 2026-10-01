@@ -86,6 +86,10 @@ SOURCES = [
      "url": _gn("कमोडिटी सोना चांदी कच्चा तेल भाव"), "gn": True},
     {"category": "आविष्कार व नवाचार", "source": "Google News", "lang": "hi", "cap": 8,
      "url": _gn("भारत नया आविष्कार तकनीक नवाचार अनुसंधान समाचार"), "gn": True},
+    {"category": "भारत – अंतरराष्ट्रीय दृष्टि", "source": "BBC News", "lang": "en", "cap": 8, "max_age_hours": 24,
+     "url": "https://feeds.bbci.co.uk/news/world/asia/india/rss.xml", "gn": False},
+    {"category": "भारत – अंतरराष्ट्रीय दृष्टि", "source": "The Guardian", "lang": "en", "cap": 8, "max_age_hours": 24,
+     "url": "https://www.theguardian.com/world/india/rss", "gn": False},
 ]
 
 
