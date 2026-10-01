@@ -133,6 +133,26 @@ def _entry_dt(entry):
         return None
 
 
+def _entry_image(entry):
+    for mc in (entry.get("media_content") or []):
+        url = mc.get("url")
+        if url and str(mc.get("medium", "image")).startswith("image"):
+            return url
+    for mt in (entry.get("media_thumbnail") or []):
+        if mt.get("url"):
+            return mt["url"]
+    for enc in (entry.get("enclosures") or []):
+        if enc.get("url") and "image" in str(enc.get("type", "")):
+            return enc["url"]
+    for link in (entry.get("links") or []):
+        if link.get("rel") == "enclosure" and "image" in str(link.get("type", "")):
+            return link.get("href")
+    m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', entry.get("summary", "") or "")
+    if m:
+        return m.group(1)
+    return ""
+
+
 async def _get(client, src):
     try:
         r = await client.get(src["url"], timeout=20.0)
@@ -174,6 +194,7 @@ async def collect_candidates():
                 "source": _publisher(e, src),
                 "source_language": src["lang"],
                 "source_url": link,
+                "image_source_url": _entry_image(e),
             }))
         rows.sort(key=lambda x: x[0], reverse=True)
         for _, row in rows[: src["cap"]]:

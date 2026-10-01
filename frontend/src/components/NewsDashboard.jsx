@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
   Newspaper, Sparkles, Loader2, Sun, Moon, Plus, Send, Trash2,
-  GitCompareArrows, ShieldCheck, Search, FileText, Clock, DownloadCloud,
+  GitCompareArrows, ShieldCheck, Search, FileText, Clock, DownloadCloud, ImagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,8 @@ import {
 import { NEWS } from "@/constants/testIds";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const MEDIA = (p) => (p ? `${process.env.REACT_APP_BACKEND_URL}${p}` : null);
+const BRAND = "गाजियाबाद टाइम्स";
 
 const STATUSES = ["All", "Pending_Review", "Rewritten_Pending_Publish", "Published"];
 const CATEGORIES = ["National", "Politics", "Business", "Technology", "Sports"];
@@ -59,6 +61,7 @@ export default function NewsDashboard() {
   const [addOpen, setAddOpen] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [region, setRegion] = useState("All");
+  const [genImageId, setGenImageId] = useState(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -156,6 +159,21 @@ export default function NewsDashboard() {
       toast.success("आइटम हटाया गया");
     } catch (e) {
       toast.error("हटाने में विफल");
+    }
+  };
+
+  const handleGenerateImage = async (id) => {
+    setGenImageId(id);
+    toast.loading("गाजियाबाद टाइम्स फोटो तैयार हो रही है...", { id: `img-${id}` });
+    try {
+      const { data } = await axios.post(`${API}/news/${id}/generate-image`);
+      toast.success("वाटरमार्क सहित फोटो तैयार", { id: `img-${id}` });
+      setItems((prev) => prev.map((it) => (it.id === id ? data : it)));
+      setCompareItem((ci) => (ci && ci.id === id ? data : ci));
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "फोटो जेनरेशन विफल", { id: `img-${id}` });
+    } finally {
+      setGenImageId(null);
     }
   };
 
@@ -301,6 +319,18 @@ export default function NewsDashboard() {
                     </span>
                   </div>
 
+                  {it.status !== "Pending_Review" && it.image_url && (
+                    <div className="mb-3 rounded-lg overflow-hidden border border-border">
+                      <img
+                        src={MEDIA(it.image_url)}
+                        alt={BRAND}
+                        data-testid={NEWS.newsImage(it.id)}
+                        className="w-full h-44 object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+
                   <h3 className={`text-lg font-semibold leading-snug mb-2 ${it.status === "Pending_Review" ? "" : "font-hindi"}`}>
                     {it.status === "Pending_Review" ? it.headline : it.rewritten_headline}
                   </h3>
@@ -309,9 +339,17 @@ export default function NewsDashboard() {
                   </p>
 
                   <div className="flex items-center gap-2 mt-3 text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
-                    <span>स्रोत: {it.source || "—"}</span>
-                    <span className="opacity-40">•</span>
-                    <span>{it.source_language === "hi" ? "हिंदी" : "English"}</span>
+                    {it.status === "Pending_Review" ? (
+                      <>
+                        <span>स्रोत: {it.source || "—"}</span>
+                        <span className="opacity-40">•</span>
+                        <span>{it.source_language === "hi" ? "हिंदी" : "English"}</span>
+                      </>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-primary font-semibold font-hindi normal-case tracking-normal text-xs">
+                        <ShieldCheck className="h-3.5 w-3.5" /> {BRAND}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border">
@@ -341,15 +379,27 @@ export default function NewsDashboard() {
                         <Button size="sm" variant="outline" onClick={() => setCompareItem(it)} data-testid={NEWS.compareBtn(it.id)} className="gap-2">
                           <GitCompareArrows className="h-4 w-4" /> तुलना देखें
                         </Button>
+                        {!it.image_url && (
+                          <Button size="sm" variant="secondary" onClick={() => handleGenerateImage(it.id)} disabled={genImageId === it.id} data-testid={NEWS.imageGenBtn(it.id)} className="gap-2">
+                            {genImageId === it.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />} फोटो जेनरेट करें
+                          </Button>
+                        )}
                         <Button size="sm" onClick={() => handlePublish(it.id)} data-testid={NEWS.publishBtn(it.id)} className="gap-2">
                           <Send className="h-4 w-4" /> प्रकाशित करें
                         </Button>
                       </>
                     )}
                     {it.status === "Published" && (
-                      <Button size="sm" variant="outline" onClick={() => setCompareItem(it)} data-testid={NEWS.compareBtn(it.id)} className="gap-2">
-                        <GitCompareArrows className="h-4 w-4" /> लेख देखें
-                      </Button>
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => setCompareItem(it)} data-testid={NEWS.compareBtn(it.id)} className="gap-2">
+                          <GitCompareArrows className="h-4 w-4" /> लेख देखें
+                        </Button>
+                        {!it.image_url && (
+                          <Button size="sm" variant="secondary" onClick={() => handleGenerateImage(it.id)} disabled={genImageId === it.id} data-testid={NEWS.imageGenBtn(it.id)} className="gap-2">
+                            {genImageId === it.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />} फोटो जेनरेट करें
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 </motion.div>
@@ -359,7 +409,13 @@ export default function NewsDashboard() {
         )}
       </main>
 
-      <ComparisonModal item={compareItem} onClose={() => setCompareItem(null)} onPublish={handlePublish} />
+      <ComparisonModal
+        item={compareItem}
+        onClose={() => setCompareItem(null)}
+        onPublish={handlePublish}
+        onGenerateImage={handleGenerateImage}
+        generatingId={genImageId}
+      />
       <AddNewsModal open={addOpen} onClose={() => setAddOpen(false)} onCreated={loadAll} />
     </div>
   );
@@ -377,7 +433,7 @@ function StatCard({ tid, label, value, icon: Icon, tone }) {
   );
 }
 
-function ComparisonModal({ item, onClose, onPublish }) {
+function ComparisonModal({ item, onClose, onPublish, onGenerateImage, generatingId }) {
   if (!item) return null;
   return (
     <Dialog open={!!item} onOpenChange={(o) => !o && onClose()}>
@@ -388,7 +444,7 @@ function ComparisonModal({ item, onClose, onPublish }) {
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 text-emerald-500 text-xs font-medium">
-              <ShieldCheck className="h-4 w-4" /> 100% तथ्य सुरक्षित • शून्य मात्रा/वर्तनी त्रुटि
+              <ShieldCheck className="h-4 w-4" /> 100% तथ्य सुरक्षित • शून्य मात्रा/वर्तनी त्रुटि • स्रोत पूर्णतः हटाया गया
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -406,6 +462,28 @@ function ComparisonModal({ item, onClose, onPublish }) {
           <div className="rounded-lg border border-primary/30 bg-primary/[0.04] p-4">
             <div className="text-[11px] font-mono uppercase tracking-wider text-primary mb-3">
               पुनर्लिखित (उच्च पत्रकारिता श्रेणी)
+            </div>
+
+            {item.image_url ? (
+              <div className="mb-3 rounded-lg overflow-hidden border border-primary/30">
+                <img src={MEDIA(item.image_url)} alt={BRAND} data-testid="comparison-image" className="w-full h-56 object-cover" />
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onGenerateImage(item.id)}
+                disabled={generatingId === item.id}
+                data-testid={NEWS.imageGenBtn(item.id)}
+                className="gap-2 mb-3"
+              >
+                {generatingId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                गाजियाबाद टाइम्स फोटो जेनरेट करें
+              </Button>
+            )}
+
+            <div className="text-[11px] font-semibold text-primary mb-2 flex items-center gap-1 font-hindi">
+              <ShieldCheck className="h-3.5 w-3.5" /> {BRAND}
             </div>
             <h4 className="font-semibold mb-2 font-hindi" data-testid={NEWS.rewrittenHeadline}>
               {item.rewritten_headline}

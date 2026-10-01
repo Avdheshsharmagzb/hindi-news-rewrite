@@ -24,4 +24,6 @@ export const NEWS = {
   addSubmitBtn: "add-submit-btn",
   fetchNewsBtn: "fetch-news-btn",
   regionFilter: "region-filter",
+  imageGenBtn: (id) => `generate-image-btn-${id}`,
+  newsImage: (id) => `news-image-${id}`,
 };

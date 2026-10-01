@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Header
+from fastapi.responses import FileResponse
 import hmac
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -15,6 +16,7 @@ from datetime import datetime, timezone
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from news_fetcher import collect_candidates, normalize_title
+from image_service import create_watermarked_image, MEDIA_DIR
 
 
 ROOT_DIR = Path(__file__).parent
@@ -60,6 +62,10 @@ class NewsItem(BaseModel):
     status: str = STATUS_PENDING
     rewritten_headline: Optional[str] = None
     rewritten_content: Optional[str] = None
+    image_source_url: str = ""
+    image_url: str = ""
+    image_status: str = "none"
+    publisher_brand: str = "गाजियाबाद टाइम्स"
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -182,6 +188,45 @@ async def rewrite_news(item_id: str):
         "status": STATUS_REWRITTEN,
         "updated_at": now_iso(),
     }
+
+    # Image policy: if the source news carried a photo, auto re-generate it (AI-modified)
+    # with watermark. If no source photo, wait for admin approval to generate one.
+    if doc.get("image_source_url"):
+        try:
+            update["image_url"] = await create_watermarked_image(
+                result["headline"], doc.get("category", ""), doc["image_source_url"]
+            )
+            update["image_status"] = "generated"
+        except Exception:
+            logger.exception("Auto image generation failed")
+            update["image_status"] = "failed"
+    else:
+        update["image_status"] = "awaiting_approval"
+
+    await db.news.update_one({"id": item_id}, {"$set": update})
+    doc.update(update)
+    return NewsItem(**doc)
+
+
+@api_router.post("/news/{item_id}/generate-image", response_model=NewsItem)
+async def generate_image_for_news(item_id: str):
+    doc = await db.news.find_one({"id": item_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="News item not found")
+    if doc.get("status") not in (STATUS_REWRITTEN, STATUS_PUBLISHED):
+        raise HTTPException(status_code=400, detail="Image can be generated only after rewrite approval")
+
+    headline = doc.get("rewritten_headline") or doc.get("headline")
+    try:
+        image_url = await create_watermarked_image(
+            headline, doc.get("category", ""), doc.get("image_source_url") or None
+        )
+    except Exception as e:
+        logger.exception("Image generation failed")
+        await db.news.update_one({"id": item_id}, {"$set": {"image_status": "failed"}})
+        raise HTTPException(status_code=502, detail=f"Image generation failed: {e}")
+
+    update = {"image_url": image_url, "image_status": "generated", "updated_at": now_iso()}
     await db.news.update_one({"id": item_id}, {"$set": update})
     doc.update(update)
     return NewsItem(**doc)
@@ -206,6 +251,16 @@ async def delete_news(item_id: str):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="News item not found")
     return {"deleted": True}
+
+
+@api_router.get("/media/{name}")
+async def get_media(name: str):
+    if "/" in name or "\\" in name or ".." in name:
+        raise HTTPException(status_code=400, detail="Invalid name")
+    path = MEDIA_DIR / name
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(str(path), media_type="image/jpeg")
 
 
 async def fetch_and_store():
