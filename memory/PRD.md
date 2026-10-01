@@ -39,6 +39,12 @@ Add an 'Approve for Rewrite' action button on 'Pending_Review' news items in the
 - Endpoints: `POST /api/news/{id}/generate-image`. NewsItem: image_source_url, image_url, image_status, publisher_brand.
 - Verified: 26/26 backend tests + frontend 100% (iteration_3.json).
 
+## Implemented (2026-10) — Regenerate Photo, Public Reader Page & Watermark Settings
+- **फोटो पुनः बनाएँ**: one-click re-generate watermarked image on any rewritten/published card and in comparison modal (button toggles 'फोटो जेनरेट करें' ↔ 'फोटो पुनः बनाएँ').
+- **Public reader page** at `/news` (`PublicNews.jsx`): newspaper masthead "गाजियाबाद टाइम्स", lead + grid of Published-only news with images, brand byline, dates, light theme. `GET /api/public/news` whitelists keys — no source/source_url leaked. Header link + back-to-admin link.
+- **Watermark settings** (gear icon → SettingsDialog): position (center/bottom-right/bottom-left) + opacity (5-100%). `GET/PUT /api/settings` (db.settings), validated server-side; applied to every subsequent image generation via `get_watermark_settings()`.
+- Verified: 14/14 new backend tests + frontend 100% (iteration_4.json).
+
 ## Backlog / Remaining
 - P1: Auth (JWT or Emergent Google) for admin dashboard.
 - P2: Edit original before rewrite; re-trigger rewrite; archive published; diff highlighting.
