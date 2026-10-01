@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Header
+import hmac
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -13,6 +14,7 @@ import uuid
 from datetime import datetime, timezone
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from news_fetcher import collect_candidates, normalize_title
 
 
 ROOT_DIR = Path(__file__).parent
@@ -24,6 +26,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
+WEBHOOK_CRON_SECRET = os.environ.get('WEBHOOK_CRON_SECRET', '')
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -52,6 +55,7 @@ class NewsItem(BaseModel):
     content: str
     category: str = "National"
     source: str = ""
+    source_url: str = ""
     source_language: str = "en"
     status: str = STATUS_PENDING
     rewritten_headline: Optional[str] = None
@@ -202,6 +206,59 @@ async def delete_news(item_id: str):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="News item not found")
     return {"deleted": True}
+
+
+async def fetch_and_store():
+    """Fetch fresh (<=4h) news from all sources and store new unique items as Pending_Review."""
+    candidates = await collect_candidates()
+
+    existing_urls = set()
+    existing_titles = set()
+    async for d in db.news.find({}, {"source_url": 1, "headline": 1, "_id": 0}):
+        if d.get("source_url"):
+            existing_urls.add(d["source_url"])
+        existing_titles.add(normalize_title(d.get("headline", "")))
+
+    seen_titles = set()
+    docs = []
+    by_category = {}
+    for c in candidates:
+        if c["source_url"] and c["source_url"] in existing_urls:
+            continue
+        nt = normalize_title(c["headline"])
+        if nt and (nt in existing_titles or nt in seen_titles):
+            continue
+        seen_titles.add(nt)
+        docs.append(NewsItem(**c).model_dump())
+        by_category[c["category"]] = by_category.get(c["category"], 0) + 1
+
+    if docs:
+        await db.news.insert_many(docs)
+
+    return {"fetched": len(docs), "by_category": by_category}
+
+
+@api_router.post("/news/fetch")
+async def fetch_news_now():
+    return await fetch_and_store()
+
+
+async def _run_fetch_bg():
+    try:
+        result = await fetch_and_store()
+        logger.info(f"Cron news fetch stored: {result}")
+    except Exception:
+        logger.exception("Cron news fetch failed")
+
+
+@api_router.post("/cron/fetch-news")
+async def cron_fetch_news(background_tasks: BackgroundTasks, authorization: str = Header(default="")):
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    token = authorization[7:] if authorization.startswith("Bearer ") else ""
+    if not WEBHOOK_CRON_SECRET or not hmac.compare_digest(token, WEBHOOK_CRON_SECRET):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    background_tasks.add_task(_run_fetch_bg)
+    return {"accepted": True}
 
 
 app.include_router(api_router)

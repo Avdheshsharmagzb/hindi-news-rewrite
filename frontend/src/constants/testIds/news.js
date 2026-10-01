@@ -22,4 +22,6 @@ export const NEWS = {
   addHeadlineInput: "add-headline-input",
   addContentInput: "add-content-input",
   addSubmitBtn: "add-submit-btn",
+  fetchNewsBtn: "fetch-news-btn",
+  regionFilter: "region-filter",
 };

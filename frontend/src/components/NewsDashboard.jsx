@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
   Newspaper, Sparkles, Loader2, Sun, Moon, Plus, Send, Trash2,
-  GitCompareArrows, ShieldCheck, Search, FileText, Clock,
+  GitCompareArrows, ShieldCheck, Search, FileText, Clock, DownloadCloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,8 @@ export default function NewsDashboard() {
   const [rewritingId, setRewritingId] = useState(null);
   const [compareItem, setCompareItem] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [region, setRegion] = useState("All");
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -84,15 +86,39 @@ export default function NewsDashboard() {
   const filtered = useMemo(() => {
     return items.filter((it) => {
       const okStatus = filter === "All" || it.status === filter;
+      const okRegion = region === "All" || it.category === region;
       const q = search.trim().toLowerCase();
       const okSearch =
         !q ||
         (it.headline || "").toLowerCase().includes(q) ||
         (it.content || "").toLowerCase().includes(q) ||
         (it.rewritten_headline || "").toLowerCase().includes(q);
-      return okStatus && okSearch;
+      return okStatus && okRegion && okSearch;
     });
-  }, [items, filter, search]);
+  }, [items, filter, region, search]);
+
+  const regions = useMemo(
+    () => ["All", ...Array.from(new Set(items.map((i) => i.category)))],
+    [items]
+  );
+
+  const handleFetch = async () => {
+    setFetching(true);
+    toast.loading("ताज़ा खबरें फेच हो रही हैं (अधिकतम 4 घंटे पुरानी)...", { id: "fetch" });
+    try {
+      const { data } = await axios.post(`${API}/news/fetch`);
+      const n = data.fetched || 0;
+      toast.success(
+        n > 0 ? `${n} नई खबरें जोड़ी गईं (Pending Review)` : "कोई नई खबर नहीं — सभी पहले से मौजूद",
+        { id: "fetch" }
+      );
+      await loadAll();
+    } catch (e) {
+      toast.error("न्यूज़ फेच विफल", { id: "fetch" });
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const handleRewrite = async (id) => {
     setRewritingId(id);
@@ -207,17 +233,39 @@ export default function NewsDashboard() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="relative">
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="खोजें..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 w-full md:w-56"
+                className="pl-9 w-full md:w-48"
                 data-testid="news-search-input"
               />
             </div>
+            <Select value={region} onValueChange={setRegion}>
+              <SelectTrigger className="w-44" data-testid={NEWS.regionFilter}>
+                <SelectValue placeholder="श्रेणी" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {regions.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r === "All" ? "सभी श्रेणियाँ" : r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={handleFetch}
+              disabled={fetching}
+              variant="outline"
+              data-testid={NEWS.fetchNewsBtn}
+              className="gap-2 whitespace-nowrap"
+            >
+              {fetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />}
+              न्यूज़ फेच करें
+            </Button>
             <Button onClick={() => setAddOpen(true)} data-testid={NEWS.addNewsBtn} className="gap-2 whitespace-nowrap">
               <Plus className="h-4 w-4" /> नया समाचार
             </Button>

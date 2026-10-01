@@ -1,0 +1,8 @@
+crons:
+  - name: fetch-news-hourly
+    description: "हर घंटे ताज़ा (≤4 घंटे) राष्ट्रीय व स्थानीय खबरें फेच कर Pending_Review में जोड़ता है"
+    cron: "0 * * * *"
+    endpoint: "{{BASE_URL}}/api/cron/fetch-news"
+    method: POST
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    enabled: true
